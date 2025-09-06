@@ -1,0 +1,25 @@
+from datetime import datetime, date
+from sqlalchemy import Column
+from sqlalchemy.types import DateTime, Date
+from sqlalchemy.sql import func
+from sqlmodel import SQLModel, Field, UniqueConstraint
+
+class Movie(SQLModel, table=True):
+    __table_args__ = (
+        UniqueConstraint("tmdb_id", name="uniqueConstraint_tmdb_id"),
+    )
+    id: int | None = Field(default=None, primary_key=True)
+    tmdb_id: int = Field(...)
+    imdb_id: str | None = Field(default=None)
+    title: str = Field(...)
+    overview: str = Field(...)
+    release_date: date | None = Field(default=None, sa_column=Column(Date))
+    vote_average: float | None = Field(default=None)
+    vote_count: int | None = Field(default=None)
+    genre_ids: list[int] | None = Field(default=None)
+    created_at: datetime = Field(
+        sa_column=Column(DateTime(timezone=True), server_default=func.now())
+    )
+    updated_at: datetime = Field(
+        sa_column=Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    )
