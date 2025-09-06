@@ -7,6 +7,7 @@ from sqlmodel import SQLModel, Field, UniqueConstraint
 class Movie(SQLModel, table=True):
     __table_args__ = (
         UniqueConstraint("tmdb_id", name="uniqueConstraint_tmdb_id"),
+        UniqueConstraint("imdb_id", name="uniqueConstraint_imdb_id"),
     )
     id: int | None = Field(default=None, primary_key=True)
     tmdb_id: int = Field(...)

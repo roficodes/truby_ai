@@ -4,9 +4,12 @@ from pydantic import BaseModel
 class MovieCreate(BaseModel):
     tmdb_id: int
 
+
 class MovieRead(BaseModel):
-    id: int
-    tmdb_id: int
+    id: int | None
+    tmdb_id: int | None
+    imdb_id: int | None
+
 
 class MovieUpdate(BaseModel):
     imdb_id: str | None

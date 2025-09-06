@@ -7,6 +7,7 @@ from sqlmodel import SQLModel, Field
 class Scene(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
     screenplay_id: int = Field(..., foreign_key="screenplay.id")
+    scene_number: int = Field(...)
     progress_raw: str = Field(...)
     progress_num: float = Field(...)
     beat: str | None = Field(default=None)
