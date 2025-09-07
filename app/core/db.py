@@ -1,9 +1,12 @@
 import os
 from typing import Generator
 from sqlmodel import Session, create_engine, SQLModel
+from dotenv import load_dotenv
 from models.db import Movie, Screenplay, Scene, SceneEmbedding
 
-DATABASE_URL = f"sqlite:///{os.getenv("SQL_DB_PATH")}"
+load_dotenv()
+
+DATABASE_URL = f"sqlite:///{os.getenv('SQL_DB_PATH')}"
 engine = create_engine(DATABASE_URL, echo=True, connect_args={"check_same_thread": False})
 
 def init_db():

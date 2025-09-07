@@ -17,7 +17,8 @@ class Movie(SQLModel, table=True):
     release_date: date | None = Field(default=None, sa_column=Column(Date))
     vote_average: float | None = Field(default=None)
     vote_count: int | None = Field(default=None)
-    genre_ids: list[int] | None = Field(default=None)
+    # TODO: create a genre table and movie-genre junction.
+    # genre_ids: list[int] | None = Field(default=None)
     created_at: datetime = Field(
         sa_column=Column(DateTime(timezone=True), server_default=func.now())
     )

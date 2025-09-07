@@ -7,7 +7,8 @@ from sqlmodel import SQLModel, Field
 class Screenplay(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
     movie_id: int = Field(..., foreign_key="movie.id")
-    authors: list[str] | None = Field(default=None)
+    # TODO: create an author table and screenplay-author junction.
+    # authors: list[str] | None = Field(default=None)
     storage_path: str = Field(...)
     total_scenes: int | None = Field(default=None)
     created_at: datetime = Field(

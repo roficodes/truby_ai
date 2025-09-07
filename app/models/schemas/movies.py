@@ -16,4 +16,4 @@ class MovieUpdate(BaseModel):
     release_date: datetime | None 
     vote_average: float | None
     vote_count: int | None
-    genre_ids: list[int] | None
+    # genre_ids: list[int] | None
