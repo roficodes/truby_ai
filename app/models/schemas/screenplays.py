@@ -1,8 +1,10 @@
 from pydantic import BaseModel
 
 class ScreenplayCreate(BaseModel):
-    file_path: str
-    tmdb_id: int
+    movie_id: int 
+    storage_path: str
+    text: str | None
+    total_scenes: int | None
 
 class ScreenplayRead(BaseModel):
     id: int | None

@@ -10,6 +10,7 @@ class Screenplay(SQLModel, table=True):
     # TODO: create an author table and screenplay-author junction.
     # authors: list[str] | None = Field(default=None)
     storage_path: str = Field(...)
+    text: str | None = Field(default=None)
     total_scenes: int | None = Field(default=None)
     created_at: datetime = Field(
         sa_column=Column(DateTime(timezone=True), server_default=func.now())

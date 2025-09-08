@@ -1,5 +1,8 @@
 from pydantic import BaseModel
 
+class SceneCreate(BaseModel):
+    pass
+
 class SceneRead(BaseModel):
     id: int | None
     movie_id: int | None
