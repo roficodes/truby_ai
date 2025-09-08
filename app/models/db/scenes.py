@@ -14,6 +14,7 @@ class Scene(SQLModel, table=True):
     ai_summary: str | None = Field(default=None)
     previous_scene_id: int | None = Field(default=None)
     next_scene_id: int | None = Field(default=None)
+    mongodb_record_id: str | None = Field(default=None)
     created_at: datetime = Field(
         sa_column=Column(DateTime(timezone=True), server_default=func.now())
     )

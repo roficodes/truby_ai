@@ -28,7 +28,7 @@ async def fetch_tmdb_movie(tmdb_id: int, async_client: httpx.AsyncClient) -> dic
 
 def tmdb_json_to_movie(tmdb_response: dict) -> Movie:
     tmdb_movie_model = TMDBMovieModel(**tmdb_response)
-    movie_in = MovieCreate(
+    movie_create_model = MovieCreate(
         tmdb_id=tmdb_movie_model.id,
         imdb_id=tmdb_movie_model.imdb_id,
         title=tmdb_movie_model.title,
@@ -37,8 +37,8 @@ def tmdb_json_to_movie(tmdb_response: dict) -> Movie:
         vote_average=tmdb_movie_model.vote_average,
         vote_count=tmdb_movie_model.vote_count
     )
-    movie_out = Movie(**movie_in.model_dump())
-    return movie_out
+    movie_record = Movie(**movie_create_model.model_dump())
+    return movie_record
 
 async def create_movie(
     tmdb_id: int, 
@@ -47,7 +47,7 @@ async def create_movie(
 ) -> Movie:
     movie_record = session.exec(select(Movie).where(Movie.tmdb_id == tmdb_id)).first()
     if movie_record:
-        return movie_record
+        raise HTTPException(status_code=400, detail="There is already a screenplay for this movie.")
     tmdb_response = await fetch_tmdb_movie(tmdb_id=tmdb_id, async_client=async_client)
     movie_record = tmdb_json_to_movie(tmdb_response=tmdb_response)
     session.add(movie_record)

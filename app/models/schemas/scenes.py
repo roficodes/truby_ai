@@ -1,7 +1,15 @@
 from pydantic import BaseModel
 
 class SceneCreate(BaseModel):
-    pass
+    screenplay_id: int 
+    scene_number: int
+    progress_raw: str
+    progress_num: float
+    beat: str | None
+    ai_summary: str | None 
+    previous_scene_id: int | None 
+    next_scene_id: int | None
+    mongodb_record_id: str | None
 
 class SceneRead(BaseModel):
     id: int | None
@@ -16,3 +24,4 @@ class SceneUpdate(BaseModel):
     ai_summary: str | None
     previous_scene_id: int | None
     next_scene_id: int | None
+    mongodb_record_id: str | None
