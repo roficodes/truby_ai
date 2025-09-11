@@ -1,7 +1,11 @@
 import os
+import sys
 import httpx
 from dotenv import load_dotenv
+import random
+import numpy as np
 from sqlmodel import Session, select
+from core.clients import OpenAI
 from models.schemas.scenes import SceneCreate
 from models.db.screenplays import Screenplay
 from models.db.scenes import Scene, SceneEmbedding
@@ -33,11 +37,25 @@ class Scene(SQLModel, table=True):
 
 async def create_mongodb_scene_record(
     scene_id: int,
+    scene_number: int,
+    previous_scene_id: int | None,
+    next_scene_id: int | None,
+    screenplay_id: int,
     scene_text: dict[str, str],
     embedding_model: str,
     embedding: list[int]
 ) -> str:
-    return "FakeID1234567890"
+    return {
+        "scene_id": random.randint(a=0, b=sys.maxsize),
+        "scene_number": 1,
+        "previous_scene_id": 1,
+        "next_scene_id": 1,
+        "screenplay_id": 100,
+        "raw_scene_text": "INT. CLUB - DAY: Things are looking good.",
+        "embedding_scene_text": "INT CLUB DAY Things are looking good.",
+        "embedding_model": "openai/text-embedding-3-small",
+        "embedding": np.random.rand(1500,).tolist()
+    }
 
 async def create_scene_from_text(
     scene_text: dict[str, str],

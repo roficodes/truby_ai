@@ -2,18 +2,20 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from api.routers import movies_router, screenplays_router, scenes_router
 from core.db import init_db, engine as db_engine
-from core.clients import init_async_client, close_async_client
+from core.clients import init_async_client, close_async_client, init_openai_client
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     init_db()
     app.state.async_client = init_async_client()
     app.state.db_engine = db_engine
+    app.state.openai_client = init_openai_client()
     try:
         yield
     finally:
         db_engine.dispose()
         await close_async_client(app.state.async_client)
+        del app.state.openai_client
 
 
 app = FastAPI(
