@@ -1,5 +1,6 @@
-from config import MONGODB_CONNECTION
+from config import MONGODB_CONNECTION, MONGODB_DATABASE
 from pymongo import AsyncMongoClient
+from pymongo.asynchronous.database import AsyncDatabase
 from dotenv import load_dotenv
 from httpx import AsyncClient
 from openai import OpenAI
@@ -7,8 +8,9 @@ from pinecone import PineconeAsyncio
 
 load_dotenv()
 
-def init_mongodb_client() -> AsyncMongoClient:
-    return AsyncMongoClient(MONGODB_CONNECTION).get_database("")
+def init_mongodb_client() -> AsyncDatabase:
+    client = AsyncMongoClient(MONGODB_CONNECTION)
+    return client[MONGODB_DATABASE]
 
 def init_async_client() -> AsyncClient:
     return AsyncClient()
