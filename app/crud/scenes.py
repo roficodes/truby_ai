@@ -4,8 +4,10 @@ import httpx
 from dotenv import load_dotenv
 import random
 import numpy as np
+from openai import OpenAI
+from pinecone import PineconeAsyncio
+from pymongo.asynchronous.database import AsyncDatabase
 from sqlmodel import Session, select
-from core.clients import OpenAI
 from models.schemas.scenes import SceneCreate
 from models.db.screenplays import Screenplay
 from models.db.scenes import Scene, SceneEmbedding
@@ -16,46 +18,48 @@ load_dotenv()
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 PINECONE_API_KEY = os.getenv("PINECONE_API_KEY")
 
-"""
-class Scene(SQLModel, table=True):
-    id: int | None = Field(default=None, primary_key=True)
-    screenplay_id: int = Field(..., foreign_key="screenplay.id")
-    scene_number: int = Field(...)
-    progress_raw: str = Field(...)
-    progress_num: float = Field(...)
-    beat: str | None = Field(default=None)
-    ai_summary: str | None = Field(default=None)
-    previous_scene_id: int | None = Field(default=None)
-    next_scene_id: int | None = Field(default=None)
-    created_at: datetime = Field(
-        sa_column=Column(DateTime(timezone=True), server_default=func.now())
-    )
-    updated_at: datetime = Field(
-        sa_column=Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
-    )
-"""
-
-async def create_mongodb_scene_record(
+async def create_mongodb_pinecone_records(
     scene_id: int,
     scene_number: int,
     previous_scene_id: int | None,
     next_scene_id: int | None,
     screenplay_id: int,
     scene_text: dict[str, str],
+    ai_client: OpenAI,
     embedding_model: str,
-    embedding: list[int]
-) -> str:
-    return {
-        "scene_id": random.randint(a=0, b=sys.maxsize),
-        "scene_number": 1,
-        "previous_scene_id": 1,
-        "next_scene_id": 1,
-        "screenplay_id": 100,
-        "raw_scene_text": "INT. CLUB - DAY: Things are looking good.",
-        "embedding_scene_text": "INT CLUB DAY Things are looking good.",
-        "embedding_model": "openai/text-embedding-3-small",
-        "embedding": np.random.rand(1500,).tolist()
+    mongodb_client: AsyncDatabase,
+    pinecone_client: PineconeAsyncio
+) -> dict[str, str] | None:
+    mongodb_insert_record = {
+        "scene_id": scene_id,
+        "scene_number": scene_number,
+        "previous_scene_id": previous_scene_id,
+        "next_scene_id": next_scene_id,
+        "screenplay_id": screenplay_id,
+        "scene_text": scene_text,
+        "embedding_model": embedding_model
     }
+    embedding = ai_client.embeddings.create(
+        model=embedding_model,
+        input=scene_text["embedding_text"],
+        encoding_format="float"
+    ).data[0].embedding
+    mongodb_insert_record["embedding_vector"] = embedding
+    mongodb_record = await mongodb_client["scenes"].insert_one(mongodb_insert_record)
+    index = pinecone_client.IndexAsyncio(host="SCENE_EMBEDDINGS")
+    index.upsert(
+        vectors=[
+            {
+                "mongodb_scene_id": mongodb_record.inserted_id,
+                "values": embedding,
+                "metadata": mongodb_insert_record
+                
+            }
+        ],
+        namespace="scene_embeddings"
+    )
+
+    
 
 async def create_scene_from_text(
     scene_text: dict[str, str],
@@ -76,11 +80,47 @@ async def create_scene_from_text(
     session.add(scene_record)
     session.commit()
     session.refresh(scene_record)
-    mongodb_id = await create_mongodb_scene_record(
+    await create_mongodb_pinecone_records(
         scene_id=scene_record.id,
         scene_text=scene_text,
         embedding_model=embedding_model
     )
     # TODO: create update methods to update scenes (in this case, with mongodb_id)
     return scene_record
-    
+
+async def create_scenes(
+    scene_texts: list[dict[str, str]],
+    screenplay_id: int,
+    ai_client: OpenAI,
+    embedding_model: str,
+    mongodb_client: AsyncDatabase,
+    pinecone_client: PineconeAsyncio,
+    session: Session
+):
+    total_scenes = len(scene_texts)
+    scene_number = 1
+    previous_scene_id = None
+    for scene_text in scene_texts:
+        sql_scene_record = create_scene_from_text(
+            scene_text=scene_text,
+            screenplay_id=screenplay_id,
+            scene_number=scene_number,
+            total_scenes=total_scenes,
+            embedding_model=embedding_model,
+            session=session
+        )
+        create_mongodb_pinecone_records(
+            scene_id=sql_scene_record.id,
+            scene_number=scene_number,
+            previous_scene_id=previous_scene_id,
+            next_scene_id=None,
+            screenplay_id=screenplay_id,
+            scene_text=scene_text,
+            ai_client=ai_client,
+            embedding_model=embedding_model,
+            mongodb_client=mongodb_client,
+            pinecone_client=pinecone_client
+        )
+        previous_scene_id=sql_scene_record.id
+        scene_number += 1
+        

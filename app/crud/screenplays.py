@@ -1,14 +1,16 @@
 import re
 import httpx
 from pathlib import Path
+from pymongo.asynchronous.database import AsyncDatabase
 from sqlmodel import Session, select
-from fastapi import UploadFile, File, HTTPException
+from fastapi import UploadFile, HTTPException
 from langchain_community.document_loaders.pdf import PyMuPDFLoader
 from crud.movies import create_movie
+from crud.scenes import create_scenes
 from core.config import STORAGE_DIR
 from models.db.screenplays import Screenplay
 from models.db.movies import Movie
-from models.schemas.screenplays import ScreenplayCreate, ScreenplayRead, ScreenplayUpdate
+from models.schemas.screenplays import ScreenplayCreate
 
 STORAGE_DIR_PATH = Path(STORAGE_DIR)
 
@@ -30,7 +32,7 @@ def upload_screenplay(
     return save_path
 
 def clean_text_for_embedding_model(
-    scene_text: str
+    scene_text: str,
 ) -> str:
     text = re.sub(r"[\n\t]+", " ", scene_text) # remove multiple newlines and tabs
     text = re.sub(r" {2,}", " ", text) # remove extra spaces
@@ -57,7 +59,7 @@ async def create_screenplay_chunks(
         "scene_texts": scene_texts
     }
 
-def create_screenplay(
+async def create_screenplay(
     file_path: str,
     tmdb_id: int,
     session: Session,
@@ -78,4 +80,5 @@ def create_screenplay(
     session.commit()
     session.refresh()
     # TODO: here is where you now create the scene records as you should have a screenplay id
+    await create_scenes()
     return screenplay_record
