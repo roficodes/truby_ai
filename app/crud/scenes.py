@@ -1,16 +1,13 @@
 import os
-import sys
-import httpx
+import time
 from dotenv import load_dotenv
-import random
-import numpy as np
 from openai import OpenAI
 from pinecone import PineconeAsyncio
 from pymongo.asynchronous.database import AsyncDatabase
-from sqlmodel import Session, select
+from sqlmodel import Session
 from models.schemas.scenes import SceneCreate
-from models.db.screenplays import Screenplay
-from models.db.scenes import Scene, SceneEmbedding
+from models.db.scenes import Scene
+from ai.scenes import generate_ai_summary, generate_beat
 
 load_dotenv()
 
@@ -23,6 +20,8 @@ async def create_mongodb_pinecone_records(
     scene_number: int,
     previous_scene_id: int | None,
     next_scene_id: int | None,
+    ai_summary: str | None,
+    story_beat: str | None,
     screenplay_id: int,
     scene_text: dict[str, str],
     ai_client: OpenAI,
@@ -35,6 +34,8 @@ async def create_mongodb_pinecone_records(
         "scene_number": scene_number,
         "previous_scene_id": previous_scene_id,
         "next_scene_id": next_scene_id,
+        "ai_summary": ai_summary,
+        "story_beat": story_beat,
         "screenplay_id": screenplay_id,
         "scene_text": scene_text,
         "embedding_model": embedding_model
@@ -59,7 +60,6 @@ async def create_mongodb_pinecone_records(
         namespace="scene_embeddings"
     )
 
-    
 
 async def create_scene_from_text(
     scene_text: dict[str, str],
@@ -100,6 +100,7 @@ async def create_scenes(
     total_scenes = len(scene_texts)
     scene_number = 1
     previous_scene_id = None
+    previous_story_beat = "exposition"
     for scene_text in scene_texts:
         sql_scene_record = create_scene_from_text(
             scene_text=scene_text,
@@ -109,11 +110,24 @@ async def create_scenes(
             embedding_model=embedding_model,
             session=session
         )
+        ai_summary = generate_ai_summary(
+            scene_progress=f"{scene_number} out of {total_scenes}",
+            previous_story_beat=previous_story_beat,
+            ai_client=ai_client
+        )
+        time.sleep(0.5)
+        story_beat = generate_beat(
+            scene_progress=f"{scene_number} out of {total_scenes}",
+            previous_story_beat=previous_story_beat,
+            ai_client=ai_client
+        )
         create_mongodb_pinecone_records(
             scene_id=sql_scene_record.id,
             scene_number=scene_number,
             previous_scene_id=previous_scene_id,
             next_scene_id=None,
+            ai_summary=ai_summary,
+            story_beat=story_beat,
             screenplay_id=screenplay_id,
             scene_text=scene_text,
             ai_client=ai_client,
@@ -122,5 +136,7 @@ async def create_scenes(
             pinecone_client=pinecone_client
         )
         previous_scene_id=sql_scene_record.id
-        scene_number += 1
+        previous_story_beat=story_beat
+        
+
         
