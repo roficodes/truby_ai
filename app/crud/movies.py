@@ -9,7 +9,7 @@ from models.schemas.movies import MovieCreate, TMDBMovieModel
 load_dotenv()
 
 TMDB_READONLY_API_KEY = os.getenv("TMDB_READONLY_API_KEY")
-TMDB_MOVIE_ENDPOINT_URL = "https://api.themoviedb.org/3"
+TMDB_MOVIE_ENDPOINT_URL = "https://api.themoviedb.org/3/movie"
 
 async def fetch_tmdb_movie(tmdb_id: int, async_client: httpx.AsyncClient) -> dict:
     try:

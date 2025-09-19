@@ -23,15 +23,27 @@ def return_story_beats(beats: dict = story_beats) -> str:
 BEAT_CREATION = """
 You are analyzing an excerpt from the screenplay "{movie_name}". This is scene number {scene_progress}. 
 
+<START OF EXCERPT>
+{scene_text}
+<END OF EXCERPT>
+
 Based on this excerpt and your knowledge of the movie, which of the following story beats does this scene fall under? Here are your choices:
 
 {story_beats}
 
-Keep in mind where we are in the story as far as scene number is concerned. Only return one value from the list. Here is the value from the previous story beat: {previous_story_beat}. Your output value can only be either equal to or immediately greater than this story beat. For example, if the previous beat is "Exposition", then your story beat choice for this one can't be Climax. It must either be Exposition or Conflict. If the previous beat was "Conflict", then your story beat choice for this one can only be either Conflict or the next greatest value RISING_ACTION. This should make sense to you because you won't jump from story beat to story beat; that's not how storytelling and screenplays work.
+Your output value can only be either equal to or immediately greater than this story beat. For example, if the previous beat is "Exposition", then your story beat choice for this one can't be Climax. It must either be Exposition or Conflict. If the previous beat was "Conflict", then your story beat choice for this one can only be either Conflict or the next greatest value RISING_ACTION. This should make sense to you because you won't jump from skip one story beat from one to another; that's not how storytelling and screenplays work.
+
+Keep in mind where we are in the story as far as scene number is concerned. Only return one value from the list. Here is the value from the previous story beat: {previous_story_beat}. 
+
+Only output the single word value of the story beat you choose. Do not include any other text or punctuation. Do not include any explanation or reasoning. Do not include any quotes. Just return the single word value. Super critical: if you're unsure, simply return the previous story beat ({previous_story_beat}) rather than making a guess.
 """.strip()
 
 AI_SUMMARY_1 = """
-You are analyzing an excerpt from the screenplay "{movie_name}". This is scene number {scene_progress}. Keep your answer analytical, specific, and written for a professional screenwriter audience. It should be no more than two paragraphs. Avoid generic praise.
+You are analyzing an excerpt from the screenplay "{movie_name}". This is scene number {scene_progress}. Keep your answer analytical, specific, and written for a professional screenwriter audience. Your entire response should be no more than two paragraphs. Avoid generic praise.
+
+<START OF EXCERPT>
+{scene_text}
+<END OF EXCERPT>
 
 1. Summarize the key events of the scene in 2–3 sentences.  
 2. Comment on the writing craft:

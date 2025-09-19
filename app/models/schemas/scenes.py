@@ -5,6 +5,7 @@ class SceneCreate(BaseModel):
     scene_number: int
     progress_raw: str
     progress_num: float
+    scene_text: str | None
     beat: str | None
     ai_summary: str | None 
     previous_scene_id: int | None 
