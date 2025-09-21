@@ -169,7 +169,7 @@ async def create_scenes(
             movie_name=movie_name,
             total_scenes=total_scenes,
             previous_story_beat=previous_story_beat,
-            scene_text=scene_text,
+            scene_text=scene_text["raw_text"],
             ai_client=ai_client
         )
         # create and index embeddings / mongodb records asynchronously
