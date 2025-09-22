@@ -1,17 +1,14 @@
 import re
 import httpx
-from pathlib import Path
 from openai import AsyncOpenAI
 from pymongo.asynchronous.database import AsyncDatabase
 from pinecone import PineconeAsyncio
-from sqlmodel import Session, select
-from fastapi import UploadFile, HTTPException
+from sqlmodel import Session
 from langchain_community.document_loaders.pdf import PyMuPDFLoader
 from crud.movies import create_movie
 from crud.scenes import create_scenes
 from core.config import EMBEDDING_MODEL
 from models.db.screenplays import Screenplay
-from models.db.movies import Movie
 from models.schemas.screenplays import ScreenplayCreate
 
 def clean_text_for_embedding_model(

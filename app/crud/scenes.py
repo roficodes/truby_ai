@@ -44,7 +44,7 @@ async def create_mongodb_pinecone_records(
     embedding_response = await asyncio.to_thread(
         ai_client.embeddings.create,
         model=embedding_model,
-        input=scene_text["embedding_text"],
+        input=ai_summary,
         encoding_format="float"
     )
     embedding = embedding_response.data[0].embedding
@@ -63,6 +63,7 @@ async def create_mongodb_pinecone_records(
                     "screenplay_id": screenplay_id,
                     "scene_number": scene_number,
                     "embedding_model": embedding_model,
+                    "ai_summary": ai_summary,
                     "embedding_text": scene_text["embedding_text"],
                     "raw_text": scene_text["raw_text"]
                 }
@@ -73,11 +74,9 @@ async def create_mongodb_pinecone_records(
 
 
 async def create_scene_from_text(
-    scene_text: dict[str, str],
     screenplay_id: int,
     scene_number: int,
     total_scenes: int,
-    embedding_model: str,
     session: Session
 ) -> Scene:
     progress_num = scene_number / total_scenes if total_scenes else 0 # lazy way to handle divide by zero
@@ -97,11 +96,6 @@ async def create_scene_from_text(
     session.add(scene_record)
     session.commit()
     session.refresh(scene_record)
-    # await create_mongodb_pinecone_records(
-    #     scene_id=scene_record.id,
-    #     scene_text=scene_text,
-    #     embedding_model=embedding_model
-    # )
     # TODO: create update methods to update scenes (in this case, with mongodb_id)
     return scene_record
 
@@ -145,11 +139,11 @@ async def create_scenes(
     for scene_text in scene_texts:
         # create_scene_from_text is async — await it
         sql_scene_record = await create_scene_from_text(
-            scene_text=scene_text,
+            # scene_text=scene_text,
             screenplay_id=screenplay_id,
             scene_number=scene_number,
             total_scenes=total_scenes,
-            embedding_model=embedding_model,
+            # embedding_model=embedding_model,
             session=session
         )
         print(f"Scene record created: {scene_number}")
@@ -169,7 +163,7 @@ async def create_scenes(
             movie_name=movie_name,
             total_scenes=total_scenes,
             previous_story_beat=previous_story_beat,
-            scene_text=scene_text["raw_text"],
+            scene_text=scene_text,
             ai_client=ai_client
         )
         # create and index embeddings / mongodb records asynchronously
