@@ -1,4 +1,5 @@
 import os
+import json
 import asyncio
 from dotenv import load_dotenv
 from openai import AsyncOpenAI
@@ -7,7 +8,7 @@ from pymongo.asynchronous.database import AsyncDatabase
 from sqlmodel import Session
 from models.schemas.scenes import SceneCreate
 from models.db.scenes import Scene
-from ai.scenes import generate_ai_summary, generate_beat
+from ai.scenes import generate_scene_analysis
 
 load_dotenv()
 
@@ -99,7 +100,7 @@ async def create_scene_from_text(
     # TODO: create update methods to update scenes (in this case, with mongodb_id)
     return scene_record
 
-async def get_story_beat(
+async def get_ai_response(
     scene_number: int,
     movie_name: str,
     total_scenes: int,
@@ -111,15 +112,16 @@ async def get_story_beat(
         return "exposition"
     if scene_number == total_scenes:
         return "resolution"
-    story_beat = await asyncio.to_thread(
-        generate_beat,
+    ai_response = await asyncio.to_thread(
+        generate_scene_analysis,
         movie_name,
-        f"{scene_number} out of {total_scenes}",
-        previous_story_beat,
+        scene_number,
+        total_scenes,
         scene_text["raw_text"],
+        previous_story_beat,
         ai_client
-        )
-    return story_beat
+    )
+    return json.loads(ai_response)
 
 async def create_scenes(
     scene_texts: list[dict[str, str]],
@@ -139,41 +141,31 @@ async def create_scenes(
     for scene_text in scene_texts:
         # create_scene_from_text is async — await it
         sql_scene_record = await create_scene_from_text(
-            # scene_text=scene_text,
             screenplay_id=screenplay_id,
             scene_number=scene_number,
             total_scenes=total_scenes,
-            # embedding_model=embedding_model,
             session=session
         )
         print(f"Scene record created: {scene_number}")
         # generate_ai_summary and generate_beat synchronous wrappers around OpenAI client; run in threads
-        ai_summary = await asyncio.to_thread(
-            generate_ai_summary,
-            movie_name,
+        ai_response = await asyncio.to_thread(
+            get_ai_response,
             scene_number,
-            f"{scene_number} out of {total_scenes}",
+            movie_name,
+            total_scenes,
             previous_story_beat,
             scene_text["raw_text"],
             ai_client
         )
         await asyncio.sleep(0.5)
-        story_beat = await get_story_beat(
-            scene_number=scene_number,
-            movie_name=movie_name,
-            total_scenes=total_scenes,
-            previous_story_beat=previous_story_beat,
-            scene_text=scene_text,
-            ai_client=ai_client
-        )
         # create and index embeddings / mongodb records asynchronously
         await create_mongodb_pinecone_records(
             scene_id=sql_scene_record.id,
             scene_number=scene_number,
             previous_scene_id=previous_scene_id,
             next_scene_id=None,
-            ai_summary=ai_summary,
-            story_beat=story_beat,
+            ai_summary=ai_response["ai_summary"],
+            story_beat=ai_response["story_beat"].lower(),
             screenplay_id=screenplay_id,
             scene_text=scene_text,
             ai_client=ai_client,
@@ -182,7 +174,7 @@ async def create_scenes(
             pinecone_client=pinecone_client
         )
         previous_scene_id=sql_scene_record.id
-        previous_story_beat=story_beat
+        previous_story_beat=ai_response["story_beat"].lower()
         scene_number += 1
         
 
