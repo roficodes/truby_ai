@@ -6,6 +6,9 @@ dist/
 wheels/
 *.egg-info
 
+# Copilot generated files
+.coverage
+
 # Virtual environments
 .venv
 .env
