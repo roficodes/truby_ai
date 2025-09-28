@@ -1,3 +1,18 @@
+"""Scene creation helpers and integrations.
+
+This module coordinates the creation of scene records in the SQL database,
+generation of AI-driven summaries/analysis, and indexing of embeddings in a
+vector database (Pinecone) with a corresponding MongoDB document for each
+scene.
+
+The functions here are written to be non-blocking from the event loop; when
+blocking or sync-only client methods are used they are executed in a
+background thread where appropriate.
+
+Note: Only docstrings are added in this change; no logic or behavior is
+modified.
+"""
+
 import os
 import json
 import asyncio
@@ -30,6 +45,35 @@ async def create_mongodb_pinecone_records(
     mongodb_database: AsyncDatabase,
     pinecone_client: PineconeAsyncio
 ) -> dict[str, str] | None:
+    """Persist a scene document to MongoDB and upsert its embedding into Pinecone.
+
+    This function constructs a MongoDB document containing the scene
+    metadata and uses the provided `ai_client` to create an embedding vector.
+    Because the OpenAI embedding client used here is synchronous, the call is
+    executed inside a thread using `asyncio.to_thread` to avoid blocking the
+    event loop. The resulting embedding vector is stored in Pinecone using the
+    provided `pinecone_client`.
+
+    Args:
+        scene_id: Internal SQL scene id.
+        scene_number: Sequential scene number within the screenplay.
+        previous_scene_id: SQL id of the previous scene or ``None``.
+        next_scene_id: SQL id of the next scene or ``None``.
+        ai_summary: AI-generated summary text for the scene.
+        story_beat: High-level story beat label for the scene.
+        screenplay_id: Parent screenplay id.
+        scene_text: Dictionary with keys ``raw_text`` and ``embedding_text``.
+        ai_client: OpenAI async client used for embedding generation (calls the
+            synchronous embeddings API under the hood).
+        embedding_model: Name of the embedding model to use.
+        mongodb_database: Async MongoDB database instance.
+        pinecone_client: Async Pinecone client used to index vectors.
+
+    Returns:
+        The MongoDB document that was inserted (as a Python dict) or ``None``
+        when no document was created. The function also performs the Pinecone
+        upsert as a side-effect.
+    """
     mongodb_insert_record = {
         "scene_id": scene_id,
         "scene_number": scene_number,
@@ -80,6 +124,23 @@ async def create_scene_from_text(
     total_scenes: int,
     session: Session
 ) -> Scene:
+    """Create a SQL scene record placeholder for a scene extracted from text.
+
+    The created `Scene` is a lightweight SQL record used to track progress and
+    association with a screenplay. At this stage the scene's AI-driven fields
+    (summary, beat, mongodb id) are left empty and intended to be populated by
+    subsequent processing.
+
+    Args:
+        screenplay_id: Parent screenplay id.
+        scene_number: 1-based scene index within the screenplay.
+        total_scenes: Total number of scenes in the screenplay. Used to
+            compute a progress ratio (0-1).
+        session: SQLModel/SQLAlchemy `Session` used to persist the record.
+
+    Returns:
+        The created and refreshed `Scene` SQL model instance.
+    """
     progress_num = scene_number / total_scenes if total_scenes else 0 # lazy way to handle divide by zero
     scene_create_model = SceneCreate(
         screenplay_id=screenplay_id,
@@ -108,6 +169,26 @@ async def get_ai_response(
     scene_text: dict[str, str],
     ai_client: AsyncOpenAI
 ) -> str:
+    """Return a story beat / AI summary for a scene.
+
+    This function short-circuits first and last scenes to deterministic labels
+    ("exposition" and "resolution"). For other scenes it delegates to the
+    `generate_scene_analysis` helper (executed inside a thread) which returns
+    a JSON string; this is parsed and returned as a Python structure.
+
+    Args:
+        scene_number: 1-based scene index.
+        movie_name: Title of the movie, provided to the AI prompt.
+        total_scenes: Total number of scenes in the screenplay.
+        previous_story_beat: The previous scene's story beat.
+        scene_text: Dict containing ``raw_text`` and ``embedding_text`` for the
+            scene.
+        ai_client: OpenAI async client used by the analysis helper.
+
+    Returns:
+        A parsed JSON object (typically a dict) returned by the AI analysis
+        helper or a short-circuit string for first/last scenes.
+    """
     if scene_number == 1:
         return "exposition"
     if scene_number == total_scenes:
@@ -133,6 +214,28 @@ async def create_scenes(
     pinecone_client: PineconeAsyncio,
     session: Session
 ):
+    """Orchestrate creation of scenes, AI analysis, and indexing.
+
+    Iterates over a sequence of scene text dictionaries and for each scene:
+    1. Creates a SQL placeholder scene record.
+    2. Requests AI analysis for the scene (run in a worker thread where the
+       helper is synchronous).
+    3. Persists the scene's embedding to MongoDB and Pinecone.
+
+    Args:
+        scene_texts: List of dicts with keys ``raw_text`` and ``embedding_text``.
+        screenplay_id: Parent screenplay id.
+        movie_name: Title of the movie.
+        ai_client: OpenAI client used for analysis and embeddings.
+        embedding_model: Embedding model name.
+        mongodb_database: Async MongoDB database.
+        pinecone_client: Async Pinecone client.
+        session: SQLModel/SQLAlchemy session used to create scene records.
+
+    Returns:
+        None. The function performs side-effects (DB writes and Pinecone index
+        operations) for each scene.
+    """
     print("Scenes being created now.")
     total_scenes = len(scene_texts)
     scene_number = 1
