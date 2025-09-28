@@ -1,3 +1,10 @@
+"""Prompt templates and helper structures for AI scene analysis.
+
+This module defines system messages, prompt constructions, and mappings
+between story beat labels and human-readable descriptions used by the
+AI prompt builders.
+"""
+
 from dataclasses import dataclass
 
 SYSTEM_MESSAGE = """You are an expert in film analysis, screenwriting, and storytelling craft. You explain scenes with the precision of a story analyst, not just plot summary. Always focus on how the writing choices shape the story, character, and audience experience.""".strip()

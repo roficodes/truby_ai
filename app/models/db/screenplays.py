@@ -1,10 +1,27 @@
+"""Database models for screenplay entities.
+
+Declares the Screenplay table which stores references to a movie and the
+original screenplay text along with timestamps.
+"""
+
 from datetime import datetime
 from sqlalchemy import Column
 from sqlalchemy.sql import func
 from sqlalchemy.types import DateTime
 from sqlmodel import SQLModel, Field
 
+
 class Screenplay(SQLModel, table=True):
+    """SQLModel representing a screenplay record.
+
+    Fields:
+        id (int): Primary key.
+        movie_id (int): Foreign key to the movies table.
+        storage_path (str): Filesystem path to the screenplay file.
+        text (str | None): Full screenplay text if stored in DB.
+        total_scenes (int | None): Cached count of scenes.
+    """
+
     id: int | None = Field(default=None, primary_key=True)
     movie_id: int = Field(..., foreign_key="movie.id")
     # TODO: create an author table and screenplay-author junction.
