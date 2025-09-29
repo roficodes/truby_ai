@@ -14,9 +14,12 @@ wheels/
 .env
 .vscode
 
-# Oopsies
+# Do not include
 truby.db
+app/mcp_components
 None
+app/crud/embeddings.py
+uv.lock
 
 # .DS_Store files from MacOS
 .DS_Store

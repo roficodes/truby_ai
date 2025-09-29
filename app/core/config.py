@@ -21,6 +21,7 @@ load_dotenv()
 SQL_DB_PATH = os.getenv("SQL_DB_PATH")
 LLM_MODEL = "gpt-4o-mini"
 EMBEDDING_MODEL = "text-embedding-3-small"
+PINECONE_NAMESPACE = "scene_embeddings"
 
 # Local MongoDB defaults; override with environment variables in production
 MONGODB_CONNECTION = "mongodb://localhost:27017/"

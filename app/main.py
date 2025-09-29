@@ -30,7 +30,7 @@ from core.clients import (
     init_mongodb_client,
     close_mongodb_client
 )
-from mcp_components.server import mcp as mcp_app
+
 
 def wrap_routes_for_debug(app: FastAPI):
     """Wrap APIRoute endpoints to await coroutine results and log them.
@@ -114,7 +114,7 @@ app = FastAPI(
 app.include_router(movies_router)
 app.include_router(screenplays_router)
 app.include_router(scenes_router)
-app.mount("/mcp", mcp_app, name="trubyai_mcp_server")
+
 wrap_routes_for_debug(app)
 
 @app.get("/")
