@@ -25,3 +25,4 @@ EMBEDDING_MODEL = "text-embedding-3-small"
 # Local MongoDB defaults; override with environment variables in production
 MONGODB_CONNECTION = "mongodb://localhost:27017/"
 MONGODB_DATABASE = "trubyai_local"
+TOP_K_CONTEXTS = 5

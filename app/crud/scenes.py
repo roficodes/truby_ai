@@ -16,6 +16,7 @@ modified.
 import os
 import json
 import asyncio
+from typing import Any
 from dotenv import load_dotenv
 from openai import AsyncOpenAI
 from pinecone import PineconeAsyncio
@@ -280,5 +281,38 @@ async def create_scenes(
         previous_story_beat=ai_response["story_beat"].lower()
         scene_number += 1
         
+async def create_embeddings(
+        user_query: str, 
+        client: AsyncOpenAI,
+        model: str = "text-embedding-3-small"
+    ) -> list[float]:
+    embedding = await client.embeddings.create(
+        input=user_query,
+        model=model
+    )
+    return embedding.data[0].embedding
 
-        
+def fetch_contexts(
+    vector: list[float], 
+    top_k: int, 
+    index: str = "",
+    namespace: str="scene_embeddings",
+) -> dict[str, Any]:
+    results = index.query(
+        vector=vector,
+        top_k=top_k,
+        namespace=namespace,
+        include_metadata=True
+    )
+    return results["matches"]
+
+def clean_contexts(
+    contexts: list[dict]
+) -> list[str]:
+    HEADER = "<START SCENE>"
+    FOOTER = "<END SCENE>"
+    cleaned_contexts = []
+    for result in contexts:
+        cleaned_context = HEADER + result["metadata"]["embedding_text"] + FOOTER
+        cleaned_contexts.append(cleaned_context)
+    return cleaned_contexts

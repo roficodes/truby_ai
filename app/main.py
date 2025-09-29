@@ -13,10 +13,11 @@ Functions:
         teardown shared resources (DB, HTTP client, OpenAI, Pinecone, etc.).
     get_root(): Simple root health endpoint.
 """
-
 from contextlib import asynccontextmanager
+import asyncio
 from fastapi import FastAPI
 from api.routers import movies_router, screenplays_router, scenes_router
+from fastapi.routing import APIRoute
 from core.config import MONGODB_DATABASE
 from core.db import init_db, engine as db_engine
 from core.clients import (
@@ -29,12 +30,9 @@ from core.clients import (
     init_mongodb_client,
     close_mongodb_client
 )
+from mcp_components.server import mcp as mcp_app
 
-from fastapi.routing import APIRoute
-# import types
-import asyncio
-
-def wrap_routes_for_debug(app):
+def wrap_routes_for_debug(app: FastAPI):
     """Wrap APIRoute endpoints to await coroutine results and log them.
 
     This function iterates the app routes and replaces the endpoint with a
@@ -116,7 +114,7 @@ app = FastAPI(
 app.include_router(movies_router)
 app.include_router(screenplays_router)
 app.include_router(scenes_router)
-
+app.mount("/mcp", mcp_app, name="trubyai_mcp_server")
 wrap_routes_for_debug(app)
 
 @app.get("/")
