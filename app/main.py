@@ -16,6 +16,7 @@ Functions:
 from contextlib import asynccontextmanager
 import asyncio
 from fastapi import FastAPI
+from fastapi_mcp import FastApiMCP
 from api.routers import movies_router, screenplays_router, scenes_router
 from fastapi.routing import APIRoute
 from core.config import MONGODB_DATABASE
@@ -129,3 +130,12 @@ def get_root():
         "App": "Root Page",
         "Summary": "Having trouble with your screenplay's beats? Truby AI will help you out.",
     }
+
+mcp_app = FastApiMCP(
+    fastapi=app,
+    name="trubyai-mcp",
+    description="Truby AI assistant model context protocol (MCP)",
+    include_operations=["get_relevant_scenes"]
+)
+mcp_app.mount_http()
+

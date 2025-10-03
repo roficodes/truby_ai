@@ -8,7 +8,9 @@ from datetime import datetime
 from sqlalchemy import Column
 from sqlalchemy.sql import func
 from sqlalchemy.types import DateTime
-from sqlmodel import SQLModel, Field
+from sqlmodel import SQLModel, Field, Relationship
+from models.db.movies import Movie
+from models.db.scenes import Scene
 
 
 class Screenplay(SQLModel, table=True):
@@ -23,7 +25,7 @@ class Screenplay(SQLModel, table=True):
     """
 
     id: int | None = Field(default=None, primary_key=True)
-    movie_id: int = Field(..., foreign_key="movie.id")
+    # movie_id: int = Field(..., foreign_key="movie.id")
     # TODO: create an author table and screenplay-author junction.
     # authors: list[str] | None = Field(default=None)
     storage_path: str = Field(...)
@@ -34,4 +36,11 @@ class Screenplay(SQLModel, table=True):
     )
     updated_at: datetime = Field(
         sa_column=Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    )
+
+    movie: Movie = Relationship(
+        cascade_delete=True
+    )
+    scene: list["Scene"] = Relationship(
+        cascade_delete=True
     )

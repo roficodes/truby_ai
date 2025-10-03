@@ -20,6 +20,7 @@ app/mcp_components
 None
 app/crud/embeddings.py
 uv.lock
+app/mcp_components
 
 # .DS_Store files from MacOS
 .DS_Store

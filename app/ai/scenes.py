@@ -71,6 +71,8 @@ def generate_scene_analysis(
         ],
         text_format=SceneAnalysis,
     )
+    print(f"AI RESPONSE: {response.output_parsed.model_dump_json()}")
+    print(f"AI RESPONSE TYPE: {type(response.output_parsed.model_dump_json())}")
     return response.output_parsed.model_dump_json()
 
 # def generate_beat(

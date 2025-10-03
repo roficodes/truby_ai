@@ -18,13 +18,15 @@ import json
 import asyncio
 from typing import Any
 from dotenv import load_dotenv
-from openai import AsyncOpenAI
+from openai import OpenAI
 from pinecone import PineconeAsyncio
+from pinecone.db_data.index_asyncio import IndexAsyncio
 from pymongo.asynchronous.database import AsyncDatabase
-from sqlmodel import Session
+from sqlmodel import Session, select
 from models.schemas.scenes import SceneCreate
 from models.db.scenes import Scene
 from ai.scenes import generate_scene_analysis
+from core.config import PINECONE_NAMESPACE, EMBEDDING_MODEL, TOP_K_CONTEXTS
 
 load_dotenv()
 
@@ -41,7 +43,7 @@ async def create_mongodb_pinecone_records(
     story_beat: str | None,
     screenplay_id: int,
     scene_text: dict[str, str],
-    ai_client: AsyncOpenAI,
+    ai_client: OpenAI,
     embedding_model: str,
     mongodb_database: AsyncDatabase,
     pinecone_client: PineconeAsyncio
@@ -168,8 +170,8 @@ async def get_ai_response(
     total_scenes: int,
     previous_story_beat: str,
     scene_text: dict[str, str],
-    ai_client: AsyncOpenAI
-) -> str:
+    ai_client: OpenAI
+) -> dict[str, Any]:
     """Return a story beat / AI summary for a scene.
 
     This function short-circuits first and last scenes to deterministic labels
@@ -190,18 +192,13 @@ async def get_ai_response(
         A parsed JSON object (typically a dict) returned by the AI analysis
         helper or a short-circuit string for first/last scenes.
     """
-    if scene_number == 1:
-        return "exposition"
-    if scene_number == total_scenes:
-        return "resolution"
-    ai_response = await asyncio.to_thread(
-        generate_scene_analysis,
-        movie_name,
-        scene_number,
-        total_scenes,
-        scene_text["raw_text"],
-        previous_story_beat,
-        ai_client
+    ai_response = generate_scene_analysis(
+        movie_name=movie_name,
+        scene_number=scene_number,
+        total_scenes=total_scenes,
+        scene_text=scene_text["raw_text"],
+        previous_story_beat=previous_story_beat,
+        ai_client=ai_client
     )
     return json.loads(ai_response)
 
@@ -209,7 +206,7 @@ async def create_scenes(
     scene_texts: list[dict[str, str]],
     screenplay_id: int,
     movie_name: str,
-    ai_client: AsyncOpenAI,
+    ai_client: OpenAI,
     embedding_model: str,
     mongodb_database: AsyncDatabase,
     pinecone_client: PineconeAsyncio,
@@ -250,17 +247,16 @@ async def create_scenes(
             total_scenes=total_scenes,
             session=session
         )
-        print(f"Scene record created: {scene_number}")
         # generate_ai_summary and generate_beat synchronous wrappers around OpenAI client; run in threads
-        ai_response = await asyncio.to_thread(
-            get_ai_response,
-            scene_number,
-            movie_name,
-            total_scenes,
-            previous_story_beat,
-            scene_text["raw_text"],
-            ai_client
+        ai_response = await get_ai_response(
+            scene_number=scene_number,
+            movie_name=movie_name,
+            total_scenes=total_scenes,
+            previous_story_beat=previous_story_beat,
+            scene_text=scene_text,
+            ai_client=ai_client
         )
+        print(ai_response)
         await asyncio.sleep(0.5)
         # create and index embeddings / mongodb records asynchronously
         await create_mongodb_pinecone_records(
@@ -277,28 +273,30 @@ async def create_scenes(
             mongodb_database=mongodb_database,
             pinecone_client=pinecone_client
         )
+        print(f"Scene record created: {scene_number}")
         previous_scene_id=sql_scene_record.id
         previous_story_beat=ai_response["story_beat"].lower()
         scene_number += 1
+        print(f"Moving on to scene {scene_number} out of {total_scenes}")
         
-async def create_embeddings(
+def create_embeddings(
         user_query: str, 
-        client: AsyncOpenAI,
-        model: str = "text-embedding-3-small"
+        client: OpenAI,
+        model: str = EMBEDDING_MODEL
     ) -> list[float]:
-    embedding = await client.embeddings.create(
+    embedding = client.embeddings.create(
         input=user_query,
         model=model
     )
     return embedding.data[0].embedding
 
-def fetch_contexts(
+async def fetch_contexts(
     vector: list[float], 
-    top_k: int, 
-    index: str = "",
-    namespace: str="scene_embeddings",
+    top_k: int,
+    index: IndexAsyncio,
+    namespace: str=PINECONE_NAMESPACE,
 ) -> dict[str, Any]:
-    results = index.query(
+    results = await index.query(
         vector=vector,
         top_k=top_k,
         namespace=namespace,
@@ -316,3 +314,65 @@ def clean_contexts(
         cleaned_context = HEADER + result["metadata"]["embedding_text"] + FOOTER
         cleaned_contexts.append(cleaned_context)
     return cleaned_contexts
+
+async def get_relevant_contexts(
+    user_query: str,
+    ai_client: OpenAI,
+    pinecone_client: PineconeAsyncio,
+    embedding_model: str = EMBEDDING_MODEL,
+    top_k: int = TOP_K_CONTEXTS,
+    namespace: str = PINECONE_NAMESPACE
+) -> list[str]:
+    """
+    Get relevant contexts based on user query.
+
+    Args:
+        user_query: User query string.
+        ai_client: AI client, set to OpenAI for now.
+        pinecone_client: Pinecone client object, Async for now.
+        embedding_model: Embedding model, set to text-embedding-3-small by default
+        top_k: Top k most relevant results
+        namespace: Pinecone index namespace
+    
+    Returns:
+        List of contexts 
+    """
+    embeddings = create_embeddings(
+        user_query=user_query,
+        client=ai_client,
+        model=embedding_model
+    )
+    index = pinecone_client.IndexAsyncio(host=os.getenv("PINECONE_HOST_URL"))
+    raw_contexts = await fetch_contexts(
+        vector=embeddings,
+        top_k=top_k,
+        index=index,
+        namespace=namespace
+    )
+    return clean_contexts(raw_contexts)
+
+def get_scenes(
+    screenplay_id: int,
+    session: Session
+) -> dict[str, Any]:
+    """Retrieve scenes based on the screenplay ID.
+    
+    Args:
+        screenplay_id: ID of the screenplay to retrieve scenes for.
+        session: SQLModel/SQLAlchemy session used for DB operations.
+    
+    Returns:
+        dict: A payload containing the list of scenes.
+    
+    Raises:
+        ValueError: If no scenes are found for the given screenplay ID.
+    """
+    select_stmt = select(Scene).where(Scene.screenplay_id == screenplay_id)
+    results = session.exec(select_stmt)
+    if results:
+        all_scenes = []
+        for scene in results:
+            all_scenes.append(scene)
+        return {"scene": all_scenes}
+    else:
+        raise ValueError(f"No scenes found for screenplay ID {screenplay_id}.")

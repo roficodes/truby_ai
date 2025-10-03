@@ -10,6 +10,7 @@ altered.
 
 import re
 import httpx
+from typing import Any
 from openai import AsyncOpenAI
 from pymongo.asynchronous.database import AsyncDatabase
 from pinecone import PineconeAsyncio
@@ -150,10 +151,12 @@ async def create_screenplay(
         total_scenes=len(screenplay_chunks["scene_texts"])
     )
     screenplay_record = Screenplay(**screenplay_create_model.model_dump())
+    movie_record.screenplay_id = screenplay_record.id
     session.add(screenplay_record)
+    session.add(movie_record)
     session.commit()
     session.refresh(screenplay_record)
-    print("Screenplay record committed. Database refreshed.")
+    session.refresh(movie_record)
     # TODO: here is where you now create the scene records as you should have a screenplay id
     await create_scenes(
         scene_texts=screenplay_chunks["scene_texts"],
@@ -166,3 +169,45 @@ async def create_screenplay(
         session=session
     )
     return screenplay_record
+
+def get_screenplay(
+    screenplay_id: int,
+    session: Session
+) -> dict[str, Any]:
+    """Retrieve a screenplay and its associated scenes from the database.
+    
+    This function retrieves the screenplay record with the given ID.
+    
+    Args:
+        screenplay_id: ID of the screenplay to delete.
+        session: SQLModel/SQLAlchemy session used for DB operations.
+    Raises:
+        ValueError: If screenplay with the given ID doesn't exist.
+    """
+    screenplay_record = session.get(Screenplay, screenplay_id)
+    if screenplay_record:
+        return {"screenplay_record": screenplay_record}
+    else:
+        raise ValueError(f"Screenplay with ID {screenplay_id} does not exist.")
+
+def delete_screenplay(
+    screenplay_id: int,
+    session: Session
+) -> dict[str, Any]:
+    """Delete a screenplay and its associated scenes from the database.
+    
+    This function deletes the screenplay record with the given ID.
+    
+    Args:
+        screenplay_id: ID of the screenplay to delete.
+        session: SQLModel/SQLAlchemy session used for DB operations.
+    Raises:
+        ValueError: If screenplay with the given ID doesn't exist.
+    """
+    screenplay_record = session.get(Screenplay, screenplay_id)
+    if screenplay_record:
+        session.delete(screenplay_record)
+        session.commit()
+        return {"Deleted": True, "screenplay_record": screenplay_record}
+    else:
+        raise ValueError(f"Screenplay with ID {screenplay_id} does not exist.")

@@ -13,11 +13,13 @@ modified.
 
 import os
 import httpx
+from typing import Any
 from dotenv import load_dotenv
 from sqlmodel import Session, select
 from fastapi import HTTPException
 from models.db.movies import Movie
 from models.schemas.movies import MovieCreate, TMDBMovieModel
+from models.db.scenes import Scene
 
 load_dotenv()
 
@@ -110,3 +112,26 @@ async def create_movie(
     session.commit()
     session.refresh(movie_record)
     return movie_record
+
+def get_movie(
+    screenplay_id: int,
+    session: Session
+) -> dict[str, Any]:
+    """Retrieve movie based on the screenplay ID.
+    
+    Args:
+        screenplay_id: ID of the screenplay to retrieve scenes for.
+        session: SQLModel/SQLAlchemy session used for DB operations.
+    
+    Returns:
+        dict: A payload containing the movie details.
+    
+    Raises:
+        ValueError: If no movie is found for the given screenplay ID.
+    """
+    movie_stmt = select(Movie).where(Movie.screenplay_id == screenplay_id)
+    results = session.exec(movie_stmt).first()
+    if results:
+        return {"movie": results}
+    else:
+        raise ValueError(f"No movie found for screenplay ID {screenplay_id}.")

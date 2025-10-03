@@ -26,13 +26,12 @@ class Movie(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
     tmdb_id: int = Field(...)
     imdb_id: str | None = Field(default=None)
+    screenplay_id: int | None = Field(default=None, foreign_key="screenplay.id", ondelete="CASCADE")
     title: str = Field(...)
     overview: str = Field(...)
     release_date: date | None = Field(default=None, sa_column=Column(Date))
     vote_average: float | None = Field(default=None)
     vote_count: int | None = Field(default=None)
-    # TODO: create a genre table and movie-genre junction.
-    # genre_ids: list[int] | None = Field(default=None)
     created_at: datetime = Field(
         sa_column=Column(DateTime(timezone=True), server_default=func.now())
     )
