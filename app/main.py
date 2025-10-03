@@ -115,6 +115,14 @@ app = FastAPI(
 app.include_router(movies_router)
 app.include_router(screenplays_router)
 app.include_router(scenes_router)
+mcp_app = FastApiMCP(
+    fastapi=app,
+    name="trubyai-mcp",
+    description="Truby AI lookup tool for contexts",
+    include_operations=["get_relevant_scenes"]
+)
+mcp_app.mount()
+mcp_app.setup_server()
 
 wrap_routes_for_debug(app)
 
@@ -130,12 +138,3 @@ def get_root():
         "App": "Root Page",
         "Summary": "Having trouble with your screenplay's beats? Truby AI will help you out.",
     }
-
-mcp_app = FastApiMCP(
-    fastapi=app,
-    name="trubyai-mcp",
-    description="Truby AI assistant model context protocol (MCP)",
-    include_operations=["get_relevant_scenes"]
-)
-mcp_app.mount_http()
-

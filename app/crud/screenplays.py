@@ -47,30 +47,60 @@ def split_script_text(
     script_text: str,
     re_pattern: re.Pattern
 ) -> list[str]:
-    """Split a screenplay's full text into scene chunks using the provided regex.
+    """
+    Robustly split screenplay text into scene chunks. Written by Github Copilot.
 
-    The function uses the `re_pattern` both to find scene headers and to split
-    the script; it then recombines header finds with their corresponding text
-    blocks to produce full scene strings.
+    Behavior:
+    1. Try treating `re_pattern` as a header matcher and slice between header
+       start positions (using finditer). Compiles pattern with DOTALL to allow
+       body matching across lines.
+    2. If no headers found, fallback to a lookahead split before INT/EXT
+       sluglines (keeps slugline at start of each chunk).
+    3. Final fallback split on blank lines.
 
     Args:
-        script_text: Full screenplay text.
-        re_pattern: Compiled regular expression that matches scene headers.
+        script_text: Full screenplay text to split.
+        re_pattern: Compiled regex pattern used to identify scene headers.
 
     Returns:
-        A list of scene strings in the order they appear in the screenplay.
+        List of scene strings (trimmed).
     """
-    final_list = []
-    all_finds = re_pattern.findall(script_text)
-    splits = re.split(pattern=re_pattern, string=script_text)
-    for i, value in enumerate(splits):
-        if i == 0:
-            final_list.append(value.strip())
-            i += 1
-            continue
-        new_text = all_finds[i-1] + " " + value.strip()
-        final_list.append(new_text.replace("  ", " "))
-    return final_list
+    # Normalize input into a compiled pattern and use safe flags
+    if isinstance(re_pattern, str):
+        pattern_str = re_pattern
+    else:
+        pattern_str = re_pattern.pattern
+
+    # Try header-based slicing (use DOTALL so '.*?' matches across lines)
+    try:
+        header_pat = re.compile(pattern_str, re.DOTALL | re.MULTILINE | re.IGNORECASE)
+    except re.error:
+        # fallback if provided pattern is invalid for some reason
+        header_pat = None
+
+    if header_pat:
+        matches = list(header_pat.finditer(script_text))
+        if matches:
+            chunks = []
+            for i, m in enumerate(matches):
+                start = m.start()
+                end = matches[i + 1].start() if i + 1 < len(matches) else len(script_text)
+                chunk = script_text[start:end].strip()
+                if chunk:
+                    chunks.append(chunk)
+            if chunks:
+                return chunks
+
+    # Lookahead split fallback: split before common sluglines (preserve slugline)
+    lookahead = r'(?mi)(?=^(?:\d+\s+)?\s*(?:INT|EXT)(?:\.)?(?:/(?:INT|EXT)(?:\.)?)?\b)'
+    splits = [s.strip() for s in re.split(lookahead, script_text) if s.strip()]
+    if len(splits) > 1:
+        return splits
+
+    # Final fallback: blank-line split so we at least return multiple chunks
+    blanks = [s.strip() for s in re.split(r'\n\s*\n+', script_text) if s.strip()]
+    return blanks if blanks else [script_text.strip()]
+
 
 async def create_screenplay_chunks(
     file_path: str,
@@ -139,11 +169,9 @@ async def create_screenplay(
         The created and refreshed `Screenplay` SQL model instance.
     """
     movie_record = await create_movie(tmdb_id=tmdb_id, async_client=async_client, session=session)
-    print(f"Movie record created: {movie_record}")
     screenplay_chunks = await create_screenplay_chunks(
         file_path=file_path
     )
-    print("Chunks created!")
     screenplay_create_model = ScreenplayCreate(
         movie_id=movie_record.id,
         storage_path=file_path,
@@ -151,11 +179,12 @@ async def create_screenplay(
         total_scenes=len(screenplay_chunks["scene_texts"])
     )
     screenplay_record = Screenplay(**screenplay_create_model.model_dump())
-    movie_record.screenplay_id = screenplay_record.id
     session.add(screenplay_record)
-    session.add(movie_record)
     session.commit()
     session.refresh(screenplay_record)
+    movie_record.screenplay_id = screenplay_record.id
+    session.add(movie_record)
+    session.commit()
     session.refresh(movie_record)
     # TODO: here is where you now create the scene records as you should have a screenplay id
     await create_scenes(

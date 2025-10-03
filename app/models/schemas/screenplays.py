@@ -13,5 +13,4 @@ class ScreenplayRead(BaseModel):
     imdb_id: int | None
 
 class ScreenplayUpdate(BaseModel):
-    # authors: list[str] | None
     total_scenes: int | None

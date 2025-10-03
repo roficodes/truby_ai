@@ -35,7 +35,7 @@ def generate_scene_analysis(
     scene_number: int,
     total_scenes: int,
     scene_text: str,
-    previous_story_beat: str,
+    previous_story_beat: str | None,
     ai_client: OpenAI,
 ) -> str:
     """Generate a JSON-serializable scene analysis using the AI client.
@@ -55,7 +55,7 @@ def generate_scene_analysis(
     Returns:
         str: JSON string representation of the parsed SceneAnalysis model.
     """
-
+    
     full_prompt = ai_summary_beats_prompt(
         movie_name=movie_name,
         scene_number=scene_number,
@@ -71,44 +71,4 @@ def generate_scene_analysis(
         ],
         text_format=SceneAnalysis,
     )
-    print(f"AI RESPONSE: {response.output_parsed.model_dump_json()}")
-    print(f"AI RESPONSE TYPE: {type(response.output_parsed.model_dump_json())}")
     return response.output_parsed.model_dump_json()
-
-# def generate_beat(
-#     movie_name: str,
-#     scene_progress: str,
-#     previous_story_beat: str,
-#     scene_text: str | None,
-#     ai_client: OpenAI
-# ):
-#     full_prompt = BEAT_CREATION.format(
-#         movie_name=movie_name,
-#         scene_progress=scene_progress,
-#         story_beats=return_story_beats(),
-#         scene_text=scene_text or "",
-#         previous_story_beat=previous_story_beat
-#     )
-#     response = ai_client.responses.create(
-#         model=LLM_MODEL,
-#         input=full_prompt,
-#     )
-#     return response.output_text
-
-
-# def generate_ai_summary(
-#     movie_name: str,
-#     scene_number: int,
-#     scene_progress: str,
-#     previous_story_beat: str,
-#     scene_text: str | None,
-#     ai_client: OpenAI
-# ) -> dict[str, str]:
-#     full_prompt = AI_SUMMARY_1.format(movie_name=movie_name, scene_progress=scene_progress, scene_text=scene_text)
-#     if scene_number != 1:
-#         full_prompt = full_prompt + AI_SUMMARY_1_ENDING.format(previous_story_beat=previous_story_beat)
-#     response = ai_client.responses.create(
-#         model=LLM_MODEL,
-#         input=full_prompt,
-#     )
-#     return response.output_text

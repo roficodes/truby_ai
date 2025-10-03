@@ -26,7 +26,7 @@ class Movie(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
     tmdb_id: int = Field(...)
     imdb_id: str | None = Field(default=None)
-    screenplay_id: int | None = Field(default=None, foreign_key="screenplay.id", ondelete="CASCADE")
+    screenplay_id: int | None = Field(foreign_key="screenplay.id", ondelete="CASCADE")
     title: str = Field(...)
     overview: str = Field(...)
     release_date: date | None = Field(default=None, sa_column=Column(Date))

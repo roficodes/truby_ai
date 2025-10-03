@@ -26,7 +26,6 @@ class TMDBMovieModel(BaseModel):
 
 class MovieCreate(BaseModel):
     """Schema for creating a Movie record in the local database."""
-
     tmdb_id: int
     imdb_id: str
     title: str
@@ -38,7 +37,6 @@ class MovieCreate(BaseModel):
 
 class MovieRead(BaseModel):
     """Minimal read schema for movie responses."""
-
     id: int | None
     tmdb_id: int | None
     imdb_id: int | None
@@ -46,9 +44,8 @@ class MovieRead(BaseModel):
 
 class MovieUpdate(BaseModel):
     """Fields allowed when updating a Movie record."""
-
+    screenplay_id: int | None
     imdb_id: str | None
     release_date: date | None 
     vote_average: float | None
     vote_count: int | None
-    # genre_ids: list[int] | None

@@ -3,7 +3,10 @@
 Provides a minimal /scenes router used during development.
 """
 
+from typing import List
 from typing import Any
+import mcp
+from pydantic import BaseModel
 from fastapi.routing import APIRouter
 from fastapi import Request, Depends
 from sqlmodel import Session
@@ -16,6 +19,11 @@ router = APIRouter(
     tags=["scenes"]
 )
 
+class QueryRequest(BaseModel):
+    user_query: str
+
+class QueryResult(BaseModel):
+    contexts: List[str]
 
 @router.get("/")
 def get_scenes_root():
@@ -33,16 +41,14 @@ def get_scenes_root():
 
 @router.post("/query", operation_id="get_relevant_scenes")
 async def query_scenes(
-    user_query: str, 
+    body: QueryRequest,
     request: Request,
     embedding_model: str=EMBEDDING_MODEL,
     top_k: int=TOP_K_CONTEXTS,
     namespace: str=PINECONE_NAMESPACE
-    ):
+    ) -> dict[str, Any]:
     """Query scenes based on a user query.
-
-    This is a placeholder implementation. Replace with actual logic to
-    fetch and return relevant scenes based on the user query.
+    This is useful for LLM models if the user asks for how they can write specific types of scenes.
 
     Args:
         user_query (str): The user's search or question.
@@ -50,6 +56,7 @@ async def query_scenes(
     Returns:
         dict: A payload containing the user query and placeholder scenes.
     """
+    user_query = body.user_query
     result = await get_relevant_contexts(
         user_query=user_query,
         ai_client=request.app.state.openai_client,
@@ -58,18 +65,21 @@ async def query_scenes(
         top_k=top_k,
         namespace=namespace
     )
-    return result
+    return QueryResult(contexts=result).model_dump()
 
 @router.get("/scenes/{screenplay_id}", operation_id="get_scenes_by_screenplay")
 async def get_scenes_by_screenplay(
-        screenplay_id: int,
-        session: Session = Depends(get_session)
+    screenplay_id: int,
+    session: Session = Depends(get_session)
 ) -> dict[str, Any]:
     """Retrieve scenes associated with a given screenplay ID.
 
     Args:
         screenplay_id: ID of the screenplay whose scenes are to be retrieved.
         session: SQLModel/SQLAlchemy session used for DB operations.
+
+    Returns:
+        Relevant contexts from the vector database.
 
     Raises:
         ValueError: If no scenes are found for the given screenplay ID.

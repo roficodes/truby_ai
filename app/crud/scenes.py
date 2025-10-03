@@ -88,7 +88,7 @@ async def create_mongodb_pinecone_records(
         "scene_text": scene_text,
         "embedding_model": embedding_model
     }
-    # ai_client.embeddings.create is synchronous; run in a thread to avoid blocking the event loop
+    
     embedding_response = await asyncio.to_thread(
         ai_client.embeddings.create,
         model=embedding_model,
@@ -234,20 +234,17 @@ async def create_scenes(
         None. The function performs side-effects (DB writes and Pinecone index
         operations) for each scene.
     """
-    print("Scenes being created now.")
     total_scenes = len(scene_texts)
     scene_number = 1
     previous_scene_id = None
     previous_story_beat = "exposition"
     for scene_text in scene_texts:
-        # create_scene_from_text is async — await it
         sql_scene_record = await create_scene_from_text(
             screenplay_id=screenplay_id,
             scene_number=scene_number,
             total_scenes=total_scenes,
             session=session
         )
-        # generate_ai_summary and generate_beat synchronous wrappers around OpenAI client; run in threads
         ai_response = await get_ai_response(
             scene_number=scene_number,
             movie_name=movie_name,
@@ -256,9 +253,7 @@ async def create_scenes(
             scene_text=scene_text,
             ai_client=ai_client
         )
-        print(ai_response)
         await asyncio.sleep(0.5)
-        # create and index embeddings / mongodb records asynchronously
         await create_mongodb_pinecone_records(
             scene_id=sql_scene_record.id,
             scene_number=scene_number,
@@ -273,11 +268,9 @@ async def create_scenes(
             mongodb_database=mongodb_database,
             pinecone_client=pinecone_client
         )
-        print(f"Scene record created: {scene_number}")
         previous_scene_id=sql_scene_record.id
         previous_story_beat=ai_response["story_beat"].lower()
         scene_number += 1
-        print(f"Moving on to scene {scene_number} out of {total_scenes}")
         
 def create_embeddings(
         user_query: str, 

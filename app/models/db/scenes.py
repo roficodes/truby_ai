@@ -8,7 +8,7 @@ from datetime import datetime
 from sqlalchemy import Column
 from sqlalchemy.sql import func
 from sqlalchemy.types import DateTime
-from sqlmodel import SQLModel, Field, Relationship
+from sqlmodel import SQLModel, Field
 
 
 class Scene(SQLModel, table=True):

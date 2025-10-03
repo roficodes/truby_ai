@@ -25,9 +25,7 @@ class Screenplay(SQLModel, table=True):
     """
 
     id: int | None = Field(default=None, primary_key=True)
-    # movie_id: int = Field(..., foreign_key="movie.id")
     # TODO: create an author table and screenplay-author junction.
-    # authors: list[str] | None = Field(default=None)
     storage_path: str = Field(...)
     text: str | None = Field(default=None)
     total_scenes: int | None = Field(default=None)
@@ -38,9 +36,10 @@ class Screenplay(SQLModel, table=True):
         sa_column=Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
     )
 
-    movie: Movie = Relationship(
+    scene: list["Scene"] = Relationship(
         cascade_delete=True
     )
-    scene: list["Scene"] = Relationship(
+
+    movie: Movie = Relationship(
         cascade_delete=True
     )

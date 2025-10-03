@@ -110,7 +110,7 @@ def ai_summary_beats_prompt(
         previous_story_beat_index, previous_story_beat_description = beat_to_index_lookup[previous_story_beat.lower()]
         next_story_beat_index = min(previous_story_beat_index+1, 5)
         next_story_beat = index_to_beat_lookup[next_story_beat_index]
-        _, next_story_beat_description = beat_to_index_lookup[next_story_beat]
+        _, next_story_beat_description = beat_to_index_lookup[next_story_beat.label]
         return full_prompt_template.format(
             movie_name=movie_name,
             scene_number=scene_number,
