@@ -14,16 +14,5 @@ wheels/
 .env
 .vscode
 
-# Do not include
-truby.db
-app/mcp_components
-None
-app/crud/embeddings.py
+# Random Files
 uv.lock
-app/mcp_components
-
-# .DS_Store files from MacOS
-.DS_Store
-app/.DS_Store
-app/models/.DS_Store 
-app/scratch
