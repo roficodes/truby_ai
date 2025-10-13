@@ -109,4 +109,4 @@ Once successful, you can take a look at the respective `movie` and `scenes` reco
 
 With your MCP server running and a few scenes now in your database, let's try running Claude Desktop with our MCP Server.
 
-<video src="./docs/images/mcp_claude_desktop_sample.mp4" controls></video>
+<iframe width="560" height="315" src="https://www.youtube.com/embed/Xfm80UkslEg?si=CAdHSjXJTIUvBYN_" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
