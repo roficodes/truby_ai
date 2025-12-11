@@ -1,7 +1,5 @@
 # Truby AI
 
-Note: ⚠️ This application is under development.
-
 Truby AI is your AI-assistant for writing better screenplays. If you want to flesh out your screenplay and have sample screenplays, then you can use Truby AI to provide you with screenwriting and storytelling tips!
 
 ## Tech Stack at a Glance
@@ -109,4 +107,6 @@ Once successful, you can take a look at the respective `movie` and `scenes` reco
 
 With your MCP server running and a few scenes now in your database, let's try running Claude Desktop with our MCP Server.
 
-<iframe width="560" height="315" src="https://www.youtube.com/embed/Xfm80UkslEg?si=CAdHSjXJTIUvBYN_" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+[![Watch the video](https://img.youtube.com/vi/Xfm80UkslEg/maxresdefault.jpg)](https://youtu.be/Xfm80UkslEg)
+
+[Watch Truby AI - MCP Sample on YouTube](https://youtu.be/Xfm80UkslEg)
